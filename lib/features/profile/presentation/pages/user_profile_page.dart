@@ -117,24 +117,35 @@ class _UserProfilePageState extends State<UserProfilePage> {
                               isOutlined: _isFollowing,
                               isLoading: _isTogglingFollow,
                               onPressed: () async {
+                                final messenger = ScaffoldMessenger.of(context);
                                 setState(() {
                                   _isTogglingFollow = true;
                                 });
-                                if (_isFollowing) {
-                                  await widget.socialGraphRepository.unfollowUser(
-                                    currentUid: widget.currentUserId,
-                                    targetUid: user.uid,
+                                try {
+                                  if (_isFollowing) {
+                                    await widget.socialGraphRepository.unfollowUser(
+                                      currentUid: widget.currentUserId,
+                                      targetUid: user.uid,
+                                    );
+                                  } else {
+                                    await widget.socialGraphRepository.followUser(
+                                      currentUid: widget.currentUserId,
+                                      targetUid: user.uid,
+                                    );
+                                  }
+                                } catch (e) {
+                                  messenger.showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Failed to update follow status. Please try again.'),
+                                      backgroundColor: AppColors.errorRed,
+                                    ),
                                   );
-                                } else {
-                                  await widget.socialGraphRepository.followUser(
-                                    currentUid: widget.currentUserId,
-                                    targetUid: user.uid,
-                                  );
-                                }
-                                if (mounted) {
-                                  setState(() {
-                                    _isTogglingFollow = false;
-                                  });
+                                } finally {
+                                  if (mounted) {
+                                    setState(() {
+                                      _isTogglingFollow = false;
+                                    });
+                                  }
                                 }
                               },
                             );
