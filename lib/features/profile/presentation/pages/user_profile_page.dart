@@ -1,8 +1,8 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/monochrome_avatar.dart';
 import '../../../../core/widgets/monochrome_button.dart';
+import '../../../../core/widgets/smart_image.dart';
 import '../../../auth/domain/entities/user_entity.dart';
 import '../../../feed/domain/entities/post_entity.dart';
 import '../../../feed/domain/repositories/feed_repository.dart';
@@ -211,7 +211,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
                         return Container(
                           color: isDark ? AppColors.darkCard : AppColors.lightCard,
                           child: mediaUrl.isNotEmpty
-                              ? CachedNetworkImage(
+                              ? SmartImage(
                                   imageUrl: mediaUrl,
                                   fit: BoxFit.cover,
                                 )

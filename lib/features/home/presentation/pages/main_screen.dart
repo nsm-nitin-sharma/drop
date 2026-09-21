@@ -1,10 +1,10 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/theme_cubit.dart';
 import '../../../../core/widgets/monochrome_avatar.dart';
 import '../../../../core/widgets/monochrome_button.dart';
+import '../../../../core/widgets/smart_image.dart';
 import '../../../auth/domain/entities/user_entity.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/presentation/bloc/auth_event.dart';
@@ -314,10 +314,9 @@ class _MainScreenState extends State<MainScreen> {
           if (mediaUrl.isNotEmpty)
             AspectRatio(
               aspectRatio: 1.0,
-              child: CachedNetworkImage(
+              child: SmartImage(
                 imageUrl: mediaUrl,
                 fit: BoxFit.cover,
-                placeholder: (context, url) => Container(color: isDark ? AppColors.darkCard : AppColors.lightCard),
               ),
             ),
 
@@ -621,7 +620,7 @@ class _MainScreenState extends State<MainScreen> {
                         return Container(
                           color: isDark ? AppColors.darkCard : AppColors.lightCard,
                           child: mediaUrl.isNotEmpty
-                              ? CachedNetworkImage(
+                              ? SmartImage(
                                   imageUrl: mediaUrl,
                                   fit: BoxFit.cover,
                                 )

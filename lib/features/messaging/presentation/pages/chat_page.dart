@@ -1,9 +1,9 @@
 import 'dart:io';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/monochrome_avatar.dart';
+import '../../../../core/widgets/smart_image.dart';
 import '../../../auth/domain/entities/user_entity.dart';
 import '../../domain/entities/message_entity.dart';
 import '../../domain/repositories/messaging_repository.dart';
@@ -164,13 +164,9 @@ class _ChatPageState extends State<ChatPage> {
                             if (hasMedia)
                               ClipRRect(
                                 borderRadius: BorderRadius.circular(12),
-                                child: CachedNetworkImage(
+                                child: SmartImage(
                                   imageUrl: message.mediaUrl!,
                                   fit: BoxFit.cover,
-                                  placeholder: (context, url) => const SizedBox(
-                                    height: 150,
-                                    child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-                                  ),
                                 ),
                               ),
                             if (message.text.isNotEmpty) ...[

@@ -1,6 +1,6 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
+import 'smart_image.dart';
 
 class MonochromeAvatar extends StatelessWidget {
   final String? photoUrl;
@@ -32,24 +32,11 @@ class MonochromeAvatar extends StatelessWidget {
         border: Border.all(color: borderColor, width: 1),
       ),
       child: ClipOval(
-        child: photoUrl != null && photoUrl!.isNotEmpty
-            ? CachedNetworkImage(
+        child: photoUrl != null && photoUrl!.trim().isNotEmpty
+            ? SmartImage(
                 imageUrl: photoUrl!,
                 fit: BoxFit.cover,
-                placeholder: (context, url) => Container(
-                  color: backgroundColor,
-                  child: Center(
-                    child: SizedBox(
-                      width: radius * 0.8,
-                      height: radius * 0.8,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 1.5,
-                        valueColor: AlwaysStoppedAnimation<Color>(textColor),
-                      ),
-                    ),
-                  ),
-                ),
-                errorWidget: (context, url, error) => _buildFallback(textColor),
+                errorWidget: _buildFallback(textColor),
               )
             : _buildFallback(textColor),
       ),
