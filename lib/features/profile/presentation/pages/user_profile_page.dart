@@ -6,6 +6,9 @@ import '../../../../core/widgets/monochrome_button.dart';
 import '../../../auth/domain/entities/user_entity.dart';
 import '../../../feed/domain/entities/post_entity.dart';
 import '../../../feed/domain/repositories/feed_repository.dart';
+import '../../../messaging/data/repositories/messaging_repository_impl.dart';
+import '../../../messaging/domain/repositories/messaging_repository.dart';
+import '../../../messaging/presentation/pages/chat_page.dart';
 import '../../../social_graph/domain/repositories/social_graph_repository.dart';
 import '../../domain/repositories/profile_repository.dart';
 
@@ -15,6 +18,7 @@ class UserProfilePage extends StatefulWidget {
   final ProfileRepository profileRepository;
   final SocialGraphRepository socialGraphRepository;
   final FeedRepository feedRepository;
+  final MessagingRepository? messagingRepository;
 
   const UserProfilePage({
     super.key,
@@ -23,6 +27,7 @@ class UserProfilePage extends StatefulWidget {
     required this.profileRepository,
     required this.socialGraphRepository,
     required this.feedRepository,
+    this.messagingRepository,
   });
 
   @override
@@ -94,43 +99,79 @@ class _UserProfilePageState extends State<UserProfilePage> {
                 ),
                 const SizedBox(height: 24),
 
-                // Follow / Unfollow Action Button (if not self)
+                // Follow / Message Action Buttons (if not self)
                 if (!isSelf)
-                  StreamBuilder<bool>(
-                    stream: widget.socialGraphRepository.isFollowingStream(
-                      currentUid: widget.currentUserId,
-                      targetUid: user.uid,
-                    ),
-                    builder: (context, followSnap) {
-                      _isFollowing = followSnap.data ?? false;
+                  Row(
+                    children: [
+                      Expanded(
+                        child: StreamBuilder<bool>(
+                          stream: widget.socialGraphRepository.isFollowingStream(
+                            currentUid: widget.currentUserId,
+                            targetUid: user.uid,
+                          ),
+                          builder: (context, followSnap) {
+                            _isFollowing = followSnap.data ?? false;
 
-                      return MonochromeButton(
-                        label: _isFollowing ? 'Following' : 'Follow',
-                        isOutlined: _isFollowing,
-                        isLoading: _isTogglingFollow,
-                        onPressed: () async {
-                          setState(() {
-                            _isTogglingFollow = true;
-                          });
-                          if (_isFollowing) {
-                            await widget.socialGraphRepository.unfollowUser(
-                              currentUid: widget.currentUserId,
-                              targetUid: user.uid,
+                            return MonochromeButton(
+                              label: _isFollowing ? 'Following' : 'Follow',
+                              isOutlined: _isFollowing,
+                              isLoading: _isTogglingFollow,
+                              onPressed: () async {
+                                setState(() {
+                                  _isTogglingFollow = true;
+                                });
+                                if (_isFollowing) {
+                                  await widget.socialGraphRepository.unfollowUser(
+                                    currentUid: widget.currentUserId,
+                                    targetUid: user.uid,
+                                  );
+                                } else {
+                                  await widget.socialGraphRepository.followUser(
+                                    currentUid: widget.currentUserId,
+                                    targetUid: user.uid,
+                                  );
+                                }
+                                if (mounted) {
+                                  setState(() {
+                                    _isTogglingFollow = false;
+                                  });
+                                }
+                              },
                             );
-                          } else {
-                            await widget.socialGraphRepository.followUser(
-                              currentUid: widget.currentUserId,
-                              targetUid: user.uid,
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: StreamBuilder<UserEntity>(
+                          stream: widget.profileRepository.streamUserProfile(widget.currentUserId),
+                          builder: (context, currentUserSnap) {
+                            final currentUser = currentUserSnap.data;
+
+                            return MonochromeButton(
+                              label: 'Message',
+                              isOutlined: true,
+                              onPressed: currentUser == null
+                                  ? null
+                                  : () {
+                                      final messagingRepo =
+                                          widget.messagingRepository ?? MessagingRepositoryImpl();
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => ChatPage(
+                                            currentUser: currentUser,
+                                            targetUser: user,
+                                            messagingRepository: messagingRepo,
+                                          ),
+                                        ),
+                                      );
+                                    },
                             );
-                          }
-                          if (mounted) {
-                            setState(() {
-                              _isTogglingFollow = false;
-                            });
-                          }
-                        },
-                      );
-                    },
+                          },
+                        ),
+                      ),
+                    ],
                   ),
                 const SizedBox(height: 24),
                 const Divider(height: 1),

@@ -15,6 +15,9 @@ import '../../../feed/domain/entities/post_entity.dart';
 import '../../../feed/domain/repositories/feed_repository.dart';
 import '../../../feed/presentation/widgets/comments_bottom_sheet.dart';
 import '../../../media_post/presentation/pages/create_post_page.dart';
+import '../../../messaging/data/repositories/messaging_repository_impl.dart';
+import '../../../messaging/domain/repositories/messaging_repository.dart';
+import '../../../messaging/presentation/pages/conversations_page.dart';
 import '../../../profile/data/repositories/profile_repository_impl.dart';
 import '../../../profile/domain/repositories/profile_repository.dart';
 import '../../../profile/presentation/pages/user_profile_page.dart';
@@ -40,6 +43,7 @@ class _MainScreenState extends State<MainScreen> {
   late SearchRepository _searchRepository;
   late SocialGraphRepository _socialGraphRepository;
   late ProfileRepository _profileRepository;
+  late MessagingRepository _messagingRepository;
 
   @override
   void initState() {
@@ -48,6 +52,7 @@ class _MainScreenState extends State<MainScreen> {
     _searchRepository = SearchRepositoryImpl();
     _socialGraphRepository = SocialGraphRepositoryImpl();
     _profileRepository = ProfileRepositoryImpl();
+    _messagingRepository = MessagingRepositoryImpl();
   }
 
   @override
@@ -79,6 +84,7 @@ class _MainScreenState extends State<MainScreen> {
                 profileRepository: _profileRepository,
                 socialGraphRepository: _socialGraphRepository,
                 feedRepository: _feedRepository,
+                messagingRepository: _messagingRepository,
               ),
             ),
           );
@@ -181,13 +187,32 @@ class _MainScreenState extends State<MainScreen> {
                     letterSpacing: 3.0,
                   ),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.add_circle_outline),
-                  onPressed: () {
-                    setState(() {
-                      _selectedIndex = 2;
-                    });
-                  },
+                Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.add_circle_outline),
+                      onPressed: () {
+                        setState(() {
+                          _selectedIndex = 2;
+                        });
+                      },
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.send_outlined),
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => ConversationsPage(
+                              currentUser: currentUser,
+                              messagingRepository: _messagingRepository,
+                              profileRepository: _profileRepository,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
                 ),
               ],
             ),
