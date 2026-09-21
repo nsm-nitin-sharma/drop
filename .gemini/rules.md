@@ -54,4 +54,5 @@ Before executing any task or modifying code in this project, the AI agent MUST a
 - **Branches**: `AI` (AI working branch) and `main` (stable target branch).
 - **Push Policy**: Push ONLY to `AI` branch. NEVER push directly to `main`.
 - **Merge Policy**: The user will review changes pushed to `AI` and perform the merge into `main`.
+- **Secrets & Credentials**: NEVER commit `google-services.json`, `GoogleService-Info.plist`, `firebase_options.dart`, or API key files to Git. Ensure they remain ignored in `.gitignore`.
 - **Commit Cadence**: Commit and push progress to `AI` after completing every crucial phase.
