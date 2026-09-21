@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -25,6 +26,8 @@ class NotificationService {
   final FlutterLocalNotificationsPlugin _localNotifications = FlutterLocalNotificationsPlugin();
 
   bool _isInitialized = false;
+  StreamSubscription? _notificationSubscription;
+  String? _activeUserId;
 
   static const AndroidNotificationChannel _channel = AndroidNotificationChannel(
     'high_importance_channel',
@@ -82,29 +85,12 @@ class NotificationService {
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       debugPrint('Foreground FCM message received: ${message.notification?.title}');
       final notification = message.notification;
-      final android = message.notification?.android;
 
       if (notification != null) {
-        _localNotifications.show(
-          id: notification.hashCode,
-          title: notification.title,
-          body: notification.body,
-          notificationDetails: NotificationDetails(
-            android: AndroidNotificationDetails(
-              _channel.id,
-              _channel.name,
-              channelDescription: _channel.description,
-              icon: android?.smallIcon ?? '@mipmap/ic_launcher',
-              importance: Importance.max,
-              priority: Priority.high,
-            ),
-            iOS: const DarwinNotificationDetails(
-              presentAlert: true,
-              presentBadge: true,
-              presentSound: true,
-            ),
-          ),
-          payload: jsonEncode(message.data),
+        showLocalBanner(
+          title: notification.title ?? 'New Notification',
+          body: notification.body ?? '',
+          data: message.data,
         );
       }
     });
@@ -120,27 +106,91 @@ class NotificationService {
     }
   }
 
-  /// Saves or updates the current user's FCM token in Firestore
+  /// Starts real-time listening for in-app notifications for the logged-in user
+  void startListeningToUserNotifications(String userId) {
+    if (userId.isEmpty || _activeUserId == userId) return;
+    _activeUserId = userId;
+    _notificationSubscription?.cancel();
+
+    _notificationSubscription = _firestore
+        .collection(AppConstants.usersCollection)
+        .doc(userId)
+        .collection('notifications')
+        .where('read', isEqualTo: false)
+        .snapshots()
+        .listen((snapshot) {
+      for (final change in snapshot.docChanges) {
+        if (change.type == DocumentChangeType.added) {
+          final data = change.doc.data();
+          if (data != null) {
+            final senderId = data['senderId'] as String? ?? '';
+            // Only notify if notification is from another user
+            if (senderId != userId) {
+              final title = data['title'] as String? ?? 'New Notification';
+              final body = data['body'] as String? ?? '';
+              showLocalBanner(title: title, body: body, data: data);
+            }
+          }
+        }
+      }
+    }, onError: (e) {
+      debugPrint('Notification snapshot error: $e');
+    });
+  }
+
+  /// Displays high-priority local notification banner
+  void showLocalBanner({
+    required String title,
+    required String body,
+    Map<String, dynamic>? data,
+  }) {
+    _localNotifications.show(
+      id: DateTime.now().millisecondsSinceEpoch.remainder(100000),
+      title: title,
+      body: body,
+      notificationDetails: NotificationDetails(
+        android: AndroidNotificationDetails(
+          _channel.id,
+          _channel.name,
+          channelDescription: _channel.description,
+          icon: '@mipmap/ic_launcher',
+          importance: Importance.max,
+          priority: Priority.high,
+          playSound: true,
+        ),
+        iOS: const DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+        ),
+      ),
+      payload: data != null ? jsonEncode(data) : null,
+    );
+  }
+
+  /// Saves or updates the current user's FCM token in Firestore and starts notification listener
   Future<void> saveFcmToken(String userId) async {
     if (userId.isEmpty) return;
+
+    startListeningToUserNotifications(userId);
 
     try {
       final token = await _fcm.getToken();
       if (token != null && token.isNotEmpty) {
-        await _firestore.collection(AppConstants.usersCollection).doc(userId).update({
+        await _firestore.collection(AppConstants.usersCollection).doc(userId).set({
           'fcmToken': token,
           'fcmTokenUpdatedAt': FieldValue.serverTimestamp(),
-        });
+        }, SetOptions(merge: true));
         debugPrint('FCM Token successfully saved for user: $userId');
       }
 
       // Listen for token refreshes
       _fcm.onTokenRefresh.listen((newToken) async {
         try {
-          await _firestore.collection(AppConstants.usersCollection).doc(userId).update({
+          await _firestore.collection(AppConstants.usersCollection).doc(userId).set({
             'fcmToken': newToken,
             'fcmTokenUpdatedAt': FieldValue.serverTimestamp(),
-          });
+          }, SetOptions(merge: true));
         } catch (_) {}
       });
     } catch (e) {
@@ -216,7 +266,6 @@ class NotificationService {
     required Map<String, dynamic> data,
   }) async {
     try {
-      // Post FCM notification payload for native OS system tray handling
       final response = await http.post(
         Uri.parse('https://fcm.googleapis.com/fcm/send'),
         headers: {
