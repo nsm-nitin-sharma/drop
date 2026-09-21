@@ -17,13 +17,13 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController();
+  final _loginInputController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
 
   @override
   void dispose() {
-    _emailController.dispose();
+    _loginInputController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
@@ -32,7 +32,7 @@ class _LoginPageState extends State<LoginPage> {
     if (_formKey.currentState?.validate() ?? false) {
       context.read<AuthBloc>().add(
             AuthSignInRequested(
-              email: _emailController.text.trim(),
+              loginInput: _loginInputController.text.trim(),
               password: _passwordController.text,
             ),
           );
@@ -94,25 +94,26 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                     const SizedBox(height: 48),
 
-                    // Inputs
+                    // Login Input (Handle or Email)
                     MonochromeTextField(
-                      controller: _emailController,
-                      label: 'Email address',
-                      hint: 'name@example.com',
+                      controller: _loginInputController,
+                      label: 'Handle (@username) or Email',
+                      hint: 'nitin_sharma or name@example.com',
                       keyboardType: TextInputType.emailAddress,
-                      prefixIcon: Icons.email_outlined,
+                      prefixIcon: Icons.person_outline,
                       validator: (value) {
                         if (value == null || value.trim().isEmpty) {
-                          return 'Please enter your email';
+                          return 'Please enter your handle or email';
                         }
-                        if (!value.contains('@')) {
-                          return 'Please enter a valid email address';
+                        if (value.trim().length < 3) {
+                          return 'Handle or email must be at least 3 characters';
                         }
                         return null;
                       },
                     ),
                     const SizedBox(height: 20),
 
+                    // Password Input
                     MonochromeTextField(
                       controller: _passwordController,
                       label: 'Password',

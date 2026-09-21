@@ -4,46 +4,46 @@ service cloud.firestore {
     
     // User Profiles Collection
     match /users/{userId} {
-      allow read: if request.auth != null;
+      allow read: if true; // Public profiles for handle search & view
       allow create, update: if request.auth != null && request.auth.uid == userId;
-      allow delete: if false; // Hard security: Users cannot delete account via raw Firestore
+      allow delete: if false;
     }
 
-    // Handles Collection (Atomic @username reservation)
+    // Handles Collection (Atomic @username reservation & login lookup)
     match /handles/{handle} {
-      allow read: if request.auth != null;
+      allow read: if true; // Public read so unauthenticated users can check handle availability and log in by handle
       allow create: if request.auth != null;
       allow update, delete: if request.auth != null && resource.data.uid == request.auth.uid;
     }
 
     // Posts Collection
     match /posts/{postId} {
-      allow read: if request.auth != null;
+      allow read: if true;
       allow create: if request.auth != null && request.resource.data.authorId == request.auth.uid;
       allow update, delete: if request.auth != null && resource.data.authorId == request.auth.uid;
     }
 
-    // Likes Collection ({postId}_{userId})
+    // Likes Collection
     match /likes/{likeId} {
-      allow read: if request.auth != null;
+      allow read: if true;
       allow create, delete: if request.auth != null && request.resource.data.userId == request.auth.uid;
     }
 
     // Comments Collection
     match /comments/{commentId} {
-      allow read: if request.auth != null;
+      allow read: if true;
       allow create: if request.auth != null && request.resource.data.authorId == request.auth.uid;
       allow update, delete: if request.auth != null && resource.data.authorId == request.auth.uid;
     }
 
     // Followers & Following Subcollections
     match /users/{userId}/followers/{followerId} {
-      allow read: if request.auth != null;
+      allow read: if true;
       allow create, delete: if request.auth != null && followerId == request.auth.uid;
     }
     
     match /users/{userId}/following/{followingId} {
-      allow read: if request.auth != null;
+      allow read: if true;
       allow create, delete: if request.auth != null && userId == request.auth.uid;
     }
 

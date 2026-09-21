@@ -33,11 +33,11 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<UserEntity> signInWithEmailAndPassword({
-    required String email,
+  Future<UserEntity> signInWithEmailOrHandle({
+    required String loginInput,
     required String password,
   }) {
-    return _remoteDataSource.signIn(email: email, password: password);
+    return _remoteDataSource.signIn(loginInput: loginInput, password: password);
   }
 
   @override

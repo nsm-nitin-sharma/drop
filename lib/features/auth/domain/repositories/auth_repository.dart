@@ -15,9 +15,9 @@ abstract class AuthRepository {
     required String displayName,
   });
 
-  /// Login with Email and Password
-  Future<UserEntity> signInWithEmailAndPassword({
-    required String email,
+  /// Login with Email or Handle (@username) and Password
+  Future<UserEntity> signInWithEmailOrHandle({
+    required String loginInput,
     required String password,
   });
 

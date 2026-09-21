@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../../core/errors/failures.dart';
 import '../../domain/repositories/auth_repository.dart';
 import 'auth_event.dart';
 import 'auth_state.dart';
@@ -43,7 +44,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       } else {
         emit(Unauthenticated());
       }
-    } catch (e) {
+    } catch (_) {
       emit(Unauthenticated());
     }
   }
@@ -54,13 +55,13 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     emit(AuthLoading());
     try {
-      final user = await _authRepository.signInWithEmailAndPassword(
-        email: event.email,
+      final user = await _authRepository.signInWithEmailOrHandle(
+        loginInput: event.loginInput,
         password: event.password,
       );
       emit(Authenticated(user));
     } catch (e) {
-      emit(AuthFailureState(e.toString().replaceAll('Exception: ', '')));
+      emit(AuthFailureState(_cleanErrorMessage(e)));
     }
   }
 
@@ -78,7 +79,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       );
       emit(Authenticated(user));
     } catch (e) {
-      emit(AuthFailureState(e.toString().replaceAll('Exception: ', '')));
+      emit(AuthFailureState(_cleanErrorMessage(e)));
     }
   }
 
@@ -89,6 +90,17 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     emit(AuthLoading());
     await _authRepository.signOut();
     emit(Unauthenticated());
+  }
+
+  String _cleanErrorMessage(dynamic error) {
+    if (error is Failure) {
+      return error.message;
+    }
+    final rawStr = error.toString();
+    if (rawStr.contains(']')) {
+      return rawStr.substring(rawStr.lastIndexOf(']') + 1).trim();
+    }
+    return rawStr.replaceAll('Exception: ', '').trim();
   }
 
   @override

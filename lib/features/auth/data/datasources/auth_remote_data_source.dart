@@ -15,7 +15,7 @@ abstract class AuthRemoteDataSource {
     required String displayName,
   });
   Future<UserModel> signIn({
-    required String email,
+    required String loginInput,
     required String password,
   });
   Future<void> signOut();
@@ -38,20 +38,30 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   Future<bool> checkHandleAvailable(String handle) async {
     final cleanHandle = handle.toLowerCase().trim();
     if (!AppConstants.handleRegex.hasMatch(cleanHandle)) {
-      throw const InvalidHandleFailure();
+      return false;
     }
-    final docRef = _firestore.collection(AppConstants.handlesCollection).doc(cleanHandle);
-    final docSnap = await docRef.get();
-    return !docSnap.exists;
+    try {
+      final docRef = _firestore.collection(AppConstants.handlesCollection).doc(cleanHandle);
+      final docSnap = await docRef.get();
+      return !docSnap.exists;
+    } catch (_) {
+      // Return false gracefully on network issue or restriction
+      return false;
+    }
   }
 
   @override
   Future<UserModel> getCurrentUserData(String uid) async {
-    final docSnap = await _firestore.collection(AppConstants.usersCollection).doc(uid).get();
-    if (!docSnap.exists) {
-      throw const ServerFailure('User profile not found in database.');
+    try {
+      final docSnap = await _firestore.collection(AppConstants.usersCollection).doc(uid).get();
+      if (!docSnap.exists) {
+        throw const ServerFailure('User profile not found.');
+      }
+      return UserModel.fromFirestore(docSnap);
+    } catch (e) {
+      if (e is Failure) rethrow;
+      throw const ServerFailure('Unable to load user profile. Please try again.');
     }
-    return UserModel.fromFirestore(docSnap);
   }
 
   @override
@@ -68,11 +78,27 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
 
     final handleDocRef = _firestore.collection(AppConstants.handlesCollection).doc(cleanHandle);
 
-    // 1. Create Firebase Auth user
-    final credential = await _firebaseAuth.createUserWithEmailAndPassword(
-      email: email.trim(),
-      password: password,
-    );
+    fb.UserCredential? credential;
+    try {
+      // 1. Create Firebase Auth user
+      credential = await _firebaseAuth.createUserWithEmailAndPassword(
+        email: email.trim(),
+        password: password,
+      );
+    } on fb.FirebaseAuthException catch (e) {
+      switch (e.code) {
+        case 'email-already-in-use':
+          throw const AuthFailure('This email address is already registered.');
+        case 'invalid-email':
+          throw const AuthFailure('Please enter a valid email address.');
+        case 'weak-password':
+          throw const AuthFailure('Password should be at least 6 characters.');
+        default:
+          throw const AuthFailure('Could not complete registration. Please check your details.');
+      }
+    } catch (e) {
+      throw const AuthFailure('Registration failed. Please try again.');
+    }
 
     final user = credential.user;
     if (user == null) {
@@ -96,38 +122,67 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
           throw const HandleAlreadyTakenFailure();
         }
 
-        // Claim handle
         transaction.set(handleDocRef, {
           'uid': user.uid,
           'createdAt': FieldValue.serverTimestamp(),
         });
 
-        // Write user document
         final userDocRef = _firestore.collection(AppConstants.usersCollection).doc(user.uid);
         transaction.set(userDocRef, userModel.toFirestore());
       });
 
-      // Update Auth Display Name
       await user.updateDisplayName(displayName.trim());
       return userModel;
     } catch (e) {
-      // If transaction fails (e.g. handle taken), clean up created auth user to avoid orphan auth state
       if (e is HandleAlreadyTakenFailure) {
         await user.delete();
         rethrow;
       }
-      throw ServerFailure(e.toString());
+      await user.delete();
+      throw const AuthFailure('Unable to save user profile. Please try again.');
     }
   }
 
   @override
   Future<UserModel> signIn({
-    required String email,
+    required String loginInput,
     required String password,
   }) async {
+    final rawInput = loginInput.trim().toLowerCase();
+    String emailToUse = rawInput;
+
+    // Check if user entered a handle instead of an email (e.g. nitin_sharma or @nitin_sharma)
+    final cleanHandle = rawInput.startsWith('@') ? rawInput.substring(1) : rawInput;
+
+    if (!cleanHandle.contains('@')) {
+      // Resolve email from handle document in Firestore
+      try {
+        final handleDoc = await _firestore.collection(AppConstants.handlesCollection).doc(cleanHandle).get();
+        if (!handleDoc.exists) {
+          throw const AuthFailure('Incorrect handle or password.');
+        }
+
+        final uid = handleDoc.data()?['uid'] as String?;
+        if (uid == null) {
+          throw const AuthFailure('Incorrect handle or password.');
+        }
+
+        final userDoc = await _firestore.collection(AppConstants.usersCollection).doc(uid).get();
+        final email = userDoc.data()?['email'] as String?;
+        if (email == null || email.isEmpty) {
+          throw const AuthFailure('Incorrect handle or password.');
+        }
+
+        emailToUse = email;
+      } catch (e) {
+        if (e is AuthFailure) rethrow;
+        throw const AuthFailure('Incorrect handle/email or password.');
+      }
+    }
+
     try {
       final credential = await _firebaseAuth.signInWithEmailAndPassword(
-        email: email.trim(),
+        email: emailToUse,
         password: password,
       );
 
@@ -140,22 +195,21 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     } on fb.FirebaseAuthException catch (e) {
       switch (e.code) {
         case 'user-not-found':
-          throw const AuthFailure('No account found with this email address.');
         case 'wrong-password':
         case 'invalid-credential':
-          throw const AuthFailure('Incorrect password or email. Please check your credentials.');
+          throw const AuthFailure('Incorrect handle/email or password.');
         case 'invalid-email':
-          throw const AuthFailure('The email address is invalid.');
+          throw const AuthFailure('Please enter a valid handle or email address.');
         case 'user-disabled':
           throw const AuthFailure('This account has been disabled.');
         case 'too-many-requests':
-          throw const AuthFailure('Too many failed login attempts. Please wait a moment and try again.');
+          throw const AuthFailure('Too many failed attempts. Please wait a moment and try again.');
         default:
-          throw AuthFailure(e.message ?? 'Authentication failed.');
+          throw const AuthFailure('Incorrect handle/email or password.');
       }
     } catch (e) {
       if (e is AuthFailure) rethrow;
-      throw AuthFailure(e.toString());
+      throw const AuthFailure('Unable to log in. Please check your connection.');
     }
   }
 
