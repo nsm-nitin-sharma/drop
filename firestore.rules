@@ -15,7 +15,7 @@ service cloud.firestore {
       allow create, update: if request.auth != null && request.auth.uid == userId;
     }
 
-    // Social Graph
+    // Social Graph (Followers & Following)
     match /users/{userId}/followers/{followerId} {
       allow read, write: if request.auth != null;
     }
@@ -30,13 +30,17 @@ service cloud.firestore {
       allow create: if request.auth != null && request.resource.data.authorId == request.auth.uid;
       allow update: if request.auth != null;
       allow delete: if request.auth != null && resource.data.authorId == request.auth.uid;
+    }
 
-      // Comments Subcollection
-      match /comments/{commentId} {
-        allow read: if request.auth != null;
-        allow create: if request.auth != null && request.resource.data.authorId == request.auth.uid;
-        allow delete: if request.auth != null && resource.data.authorId == request.auth.uid;
-      }
+    // Root Level Comments Collection
+    match /comments/{commentId} {
+      allow read: if request.auth != null;
+      allow create, delete: if request.auth != null;
+    }
+
+    // Root Level Likes Collection
+    match /likes/{likeId} {
+      allow read, write: if request.auth != null;
     }
 
     // Direct Messaging Conversations & Messages

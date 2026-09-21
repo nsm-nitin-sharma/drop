@@ -1,9 +1,9 @@
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:uuid/uuid.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/errors/failures.dart';
+import '../../../../core/services/free_media_upload_service.dart';
 import '../../domain/entities/post_entity.dart';
 import '../models/comment_model.dart';
 import '../models/post_model.dart';
@@ -32,14 +32,11 @@ abstract class FeedRemoteDataSource {
 
 class FeedRemoteDataSourceImpl implements FeedRemoteDataSource {
   final FirebaseFirestore _firestore;
-  final FirebaseStorage _storage;
   final Uuid _uuid;
 
   FeedRemoteDataSourceImpl({
     FirebaseFirestore? firestore,
-    FirebaseStorage? storage,
   })  : _firestore = firestore ?? FirebaseFirestore.instance,
-        _storage = storage ?? FirebaseStorage.instance,
         _uuid = const Uuid();
 
   @override
@@ -94,18 +91,11 @@ class FeedRemoteDataSourceImpl implements FeedRemoteDataSource {
     try {
       final List<String> mediaUrls = [];
 
-      // Upload media files to Firebase Storage
+      // Upload media files using FreeMediaUploadService
       for (final file in mediaFiles) {
-        final ext = file.path.split('.').last;
-        final fileId = _uuid.v4();
-        final ref = _storage
-            .ref()
-            .child('posts')
-            .child(authorId)
-            .child('$fileId.$ext');
-
-        final uploadTask = await ref.putFile(file);
-        final url = await uploadTask.ref.getDownloadURL();
+        final url = mediaType == MediaType.video
+            ? await FreeMediaUploadService.uploadVideo(file)
+            : await FreeMediaUploadService.uploadPhoto(file);
         mediaUrls.add(url);
       }
 

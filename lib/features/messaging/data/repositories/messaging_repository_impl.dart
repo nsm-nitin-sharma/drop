@@ -1,22 +1,19 @@
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:uuid/uuid.dart';
 import '../../../../core/constants/app_constants.dart';
+import '../../../../core/services/free_media_upload_service.dart';
 import '../../domain/entities/conversation_entity.dart';
 import '../../domain/entities/message_entity.dart';
 import '../../domain/repositories/messaging_repository.dart';
 
 class MessagingRepositoryImpl implements MessagingRepository {
   final FirebaseFirestore _firestore;
-  final FirebaseStorage _storage;
   final Uuid _uuid;
 
   MessagingRepositoryImpl({
     FirebaseFirestore? firestore,
-    FirebaseStorage? storage,
   })  : _firestore = firestore ?? FirebaseFirestore.instance,
-        _storage = storage ?? FirebaseStorage.instance,
         _uuid = const Uuid();
 
   @override
@@ -89,11 +86,7 @@ class MessagingRepositoryImpl implements MessagingRepository {
     String? mediaUrl;
 
     if (mediaFile != null) {
-      final ext = mediaFile.path.split('.').last;
-      final fileId = _uuid.v4();
-      final ref = _storage.ref().child('chats').child(chatId).child('$fileId.$ext');
-      final task = await ref.putFile(mediaFile);
-      mediaUrl = await task.ref.getDownloadURL();
+      mediaUrl = await FreeMediaUploadService.uploadPhoto(mediaFile);
     }
 
     final messageId = _uuid.v4();
