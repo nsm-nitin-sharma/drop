@@ -162,15 +162,15 @@ class NotificationService {
   }
 
   /// Displays high-priority local notification banner
-  void showLocalBanner({
+  Future<void> showLocalBanner({
     required String title,
     required String body,
     Map<String, dynamic>? data,
-  }) {
+  }) async {
     try {
       final safePayload = data != null ? jsonEncode(_cleanDataForJson(data)) : null;
 
-      _localNotifications.show(
+      await _localNotifications.show(
         id: DateTime.now().millisecondsSinceEpoch.remainder(100000),
         title: title,
         body: body,
@@ -193,7 +193,7 @@ class NotificationService {
         payload: safePayload,
       );
     } catch (e) {
-      debugPrint('Error displaying local notification banner: $e');
+      debugPrint('Notice: Local notification banner display skipped ($e)');
     }
   }
 
