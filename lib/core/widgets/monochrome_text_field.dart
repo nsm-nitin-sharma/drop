@@ -43,14 +43,15 @@ class MonochromeTextField extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          label,
+          label.toUpperCase(),
           style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: primaryColor,
+            fontSize: 11,
+            fontWeight: FontWeight.w800,
+            color: textSecondary,
+            letterSpacing: 1.2,
           ),
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 8),
         TextFormField(
           controller: controller,
           obscureText: obscureText,
@@ -62,6 +63,7 @@ class MonochromeTextField extends StatelessWidget {
           style: TextStyle(
             color: primaryColor,
             fontSize: 15,
+            fontWeight: FontWeight.w500,
           ),
           decoration: InputDecoration(
             hintText: hint,
@@ -78,22 +80,22 @@ class MonochromeTextField extends StatelessWidget {
             suffixIcon: suffixIcon,
             filled: true,
             fillColor: surfaceColor,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: borderColor, width: 1),
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide(color: borderColor, width: 1.2),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: primaryColor, width: 1.5),
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide(color: primaryColor, width: 1.8),
             ),
             errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: AppColors.errorRed, width: 1),
+              borderRadius: BorderRadius.circular(16),
+              borderSide: const BorderSide(color: AppColors.errorRed, width: 1.2),
             ),
             focusedErrorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: AppColors.errorRed, width: 1.5),
+              borderRadius: BorderRadius.circular(16),
+              borderSide: const BorderSide(color: AppColors.errorRed, width: 1.8),
             ),
           ),
         ),

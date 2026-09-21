@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/theme_cubit.dart';
+import '../../../../core/widgets/floating_nav_bar.dart';
 import '../../../../core/widgets/monochrome_avatar.dart';
 import '../../../../core/widgets/monochrome_button.dart';
 import '../../../../core/widgets/smart_image.dart';
@@ -57,7 +58,6 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final authState = context.watch<AuthBloc>().state;
     final currentUser = authState is Authenticated ? authState.user : null;
 
@@ -128,54 +128,41 @@ class _MainScreenState extends State<MainScreen> {
     ];
 
     return Scaffold(
+      extendBody: true,
       body: IndexedStack(
         index: _selectedIndex,
         children: pages,
       ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          border: Border(
-            top: BorderSide(
-              color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
-              width: 0.8,
-            ),
+      bottomNavigationBar: FloatingNavBar(
+        currentIndex: _selectedIndex,
+        onTap: (index) => setState(() => _selectedIndex = index),
+        items: const [
+          FloatingNavBarItem(
+            icon: Icons.home_outlined,
+            activeIcon: IconData(0xe318, fontFamily: 'MaterialIcons'), // Home filled
+            label: 'Feed',
           ),
-        ),
-        child: BottomNavigationBar(
-          currentIndex: _selectedIndex,
-          onTap: (index) {
-            setState(() {
-              _selectedIndex = index;
-            });
-          },
-          items: const [
-            BottomNavigationBarItem(
-              icon: Icon(Icons.home_outlined),
-              activeIcon: Icon(Icons.home_filled),
-              label: 'Feed',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.search_outlined),
-              activeIcon: Icon(Icons.search),
-              label: 'Search',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.add_box_outlined),
-              activeIcon: Icon(Icons.add_box),
-              label: 'Post',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.movie_outlined),
-              activeIcon: Icon(Icons.movie),
-              label: 'Reels',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.person_outline),
-              activeIcon: Icon(Icons.person),
-              label: 'Profile',
-            ),
-          ],
-        ),
+          FloatingNavBarItem(
+            icon: Icons.search_outlined,
+            activeIcon: Icons.search,
+            label: 'Search',
+          ),
+          FloatingNavBarItem(
+            icon: Icons.add_box_outlined,
+            activeIcon: Icons.add_box,
+            label: 'Post',
+          ),
+          FloatingNavBarItem(
+            icon: Icons.movie_outlined,
+            activeIcon: Icons.movie,
+            label: 'Reels',
+          ),
+          FloatingNavBarItem(
+            icon: Icons.person_outline,
+            activeIcon: Icons.person,
+            label: 'Profile',
+          ),
+        ],
       ),
     );
   }
@@ -218,18 +205,41 @@ class _FeedTabWidgetState extends State<_FeedTabWidget> with AutomaticKeepAliveC
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  'DROP',
-                  style: TextStyle(
-                    fontSize: 26,
-                    fontWeight: FontWeight.w900,
-                    color: primaryColor,
-                    letterSpacing: 3.0,
-                  ),
+                Row(
+                  children: [
+                    Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: primaryColor,
+                      ),
+                      child: Center(
+                        child: Text(
+                          'D',
+                          style: TextStyle(
+                            color: isDark ? AppColors.black : AppColors.white,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 18,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      'D R O P',
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                        color: primaryColor,
+                        letterSpacing: 4.0,
+                      ),
+                    ),
+                  ],
                 ),
                 Row(
                   children: [
@@ -298,6 +308,7 @@ class _FeedTabWidgetState extends State<_FeedTabWidget> with AutomaticKeepAliveC
                 }
                 return ListView.builder(
                   key: const PageStorageKey('FeedListView'),
+                  padding: const EdgeInsets.only(bottom: 90),
                   itemCount: posts.length,
                   itemBuilder: (context, index) {
                     final post = posts[index];
@@ -315,17 +326,31 @@ class _FeedTabWidgetState extends State<_FeedTabWidget> with AutomaticKeepAliveC
   Widget _buildPostCard(BuildContext context, PostEntity post, UserEntity currentUser) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final primaryColor = isDark ? AppColors.white : AppColors.black;
+    final surfaceColor = isDark ? AppColors.darkSurface : AppColors.lightSurface;
+    final borderColor = isDark ? AppColors.darkBorder : AppColors.lightBorder;
     final textSecondary = isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary;
     final mediaUrl = post.mediaUrls.isNotEmpty ? post.mediaUrls.first : '';
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: surfaceColor,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: borderColor, width: 1.2),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.black.withValues(alpha: isDark ? 0.3 : 0.04),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Post Header
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: Row(
               children: [
                 MonochromeAvatar(
@@ -354,17 +379,20 @@ class _FeedTabWidgetState extends State<_FeedTabWidget> with AutomaticKeepAliveC
 
           // Post Media
           if (mediaUrl.isNotEmpty)
-            AspectRatio(
-              aspectRatio: 1.0,
-              child: SmartImage(
-                imageUrl: mediaUrl,
-                fit: BoxFit.cover,
+            ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: AspectRatio(
+                aspectRatio: 1.0,
+                child: SmartImage(
+                  imageUrl: mediaUrl,
+                  fit: BoxFit.cover,
+                ),
               ),
             ),
 
           // Post Actions Bar
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             child: Row(
               children: [
                 IconButton(
@@ -389,7 +417,7 @@ class _FeedTabWidgetState extends State<_FeedTabWidget> with AutomaticKeepAliveC
 
           // Likes Count & Caption
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -659,6 +687,8 @@ class _ProfileTabWidgetState extends State<_ProfileTabWidget> with AutomaticKeep
     super.build(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final primaryColor = isDark ? AppColors.white : AppColors.black;
+    final surfaceColor = isDark ? AppColors.darkSurface : AppColors.lightSurface;
+    final borderColor = isDark ? AppColors.darkBorder : AppColors.lightBorder;
     final textSecondary = isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary;
 
     return StreamBuilder<UserEntity>(
@@ -669,7 +699,7 @@ class _ProfileTabWidgetState extends State<_ProfileTabWidget> with AutomaticKeep
 
         return SafeArea(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24.0),
+            padding: const EdgeInsets.only(left: 20, right: 20, top: 16, bottom: 90),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -701,84 +731,105 @@ class _ProfileTabWidgetState extends State<_ProfileTabWidget> with AutomaticKeep
                     ),
                   ],
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
 
-                // Profile Info Header
-                Row(
-                  children: [
-                    MonochromeAvatar(
-                      photoUrl: user.photoUrl,
-                      radius: 36,
-                      fallbackInitial: user.handle,
-                    ),
-                    const SizedBox(width: 24),
-                    Expanded(
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                // Glassmorphic Profile Header Dock
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: surfaceColor,
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: borderColor, width: 1.2),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.black.withValues(alpha: isDark ? 0.3 : 0.04),
+                        blurRadius: 16,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
                         children: [
-                          _buildStatColumn(context, '${user.postsCount}', 'Posts'),
-                          _buildStatColumn(context, '${user.followersCount}', 'Followers'),
-                          _buildStatColumn(context, '${user.followingCount}', 'Following'),
+                          MonochromeAvatar(
+                            photoUrl: user.photoUrl,
+                            radius: 36,
+                            fallbackInitial: user.handle,
+                          ),
+                          const SizedBox(width: 20),
+                          Expanded(
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              children: [
+                                _buildStatColumn(context, '${user.postsCount}', 'Posts'),
+                                Container(width: 1, height: 28, color: borderColor),
+                                _buildStatColumn(context, '${user.followersCount}', 'Followers'),
+                                Container(width: 1, height: 28, color: borderColor),
+                                _buildStatColumn(context, '${user.followingCount}', 'Following'),
+                              ],
+                            ),
+                          ),
                         ],
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-
-                // Name & Bio
-                Text(
-                  user.displayName,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: primaryColor,
+                      const SizedBox(height: 16),
+                      Text(
+                        user.displayName,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: primaryColor,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        user.bio.isNotEmpty ? user.bio : 'Welcome to Drop.',
+                        style: TextStyle(color: textSecondary, fontSize: 14),
+                      ),
+                      const SizedBox(height: 20),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: MonochromeButton(
+                              label: 'Edit Profile',
+                              isOutlined: true,
+                              height: 42,
+                              onPressed: () {
+                                showModalBottomSheet(
+                                  context: context,
+                                  isScrollControlled: true,
+                                  backgroundColor: Colors.transparent,
+                                  builder: (_) => EditProfileSheet(
+                                    currentUser: user,
+                                    profileRepository: widget.profileRepository,
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          IconButton(
+                            icon: const Icon(Icons.logout_rounded, color: AppColors.errorRed),
+                            tooltip: 'Log Out',
+                            onPressed: () => _showLogoutConfirmationDialog(context),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  user.bio.isNotEmpty ? user.bio : 'Welcome to Drop.',
-                  style: TextStyle(color: textSecondary, fontSize: 14),
-                ),
                 const SizedBox(height: 24),
-
-                // Edit Profile Button
-                MonochromeButton(
-                  label: 'Edit Profile',
-                  isOutlined: true,
-                  height: 42,
-                  onPressed: () {
-                    showModalBottomSheet(
-                      context: context,
-                      isScrollControlled: true,
-                      backgroundColor: Colors.transparent,
-                      builder: (_) => EditProfileSheet(
-                        currentUser: user,
-                        profileRepository: widget.profileRepository,
-                      ),
-                    );
-                  },
+                Text(
+                  'POSTS',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 2.0,
+                    color: textSecondary,
+                  ),
                 ),
                 const SizedBox(height: 12),
-
-                // Log Out Button
-                OutlinedButton(
-                  onPressed: () => _showLogoutConfirmationDialog(context),
-                  style: OutlinedButton.styleFrom(
-                    minimumSize: const Size(double.infinity, 42),
-                    side: BorderSide(color: isDark ? AppColors.darkBorder : AppColors.lightBorder),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: Text(
-                    'Log Out',
-                    style: TextStyle(color: primaryColor, fontWeight: FontWeight.w600),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                const Divider(height: 1),
-                const SizedBox(height: 16),
 
                 // User Posts Grid
                 StreamBuilder<List<PostEntity>>(
@@ -804,8 +855,8 @@ class _ProfileTabWidgetState extends State<_ProfileTabWidget> with AutomaticKeep
                       physics: const NeverScrollableScrollPhysics(),
                       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 3,
-                        crossAxisSpacing: 2,
-                        mainAxisSpacing: 2,
+                        crossAxisSpacing: 6,
+                        mainAxisSpacing: 6,
                       ),
                       itemCount: posts.length,
                       itemBuilder: (context, index) {
@@ -815,14 +866,17 @@ class _ProfileTabWidgetState extends State<_ProfileTabWidget> with AutomaticKeep
                           onLongPress: () {
                             _showPostDeleteOption(context, post, user.uid);
                           },
-                          child: Container(
-                            color: isDark ? AppColors.darkCard : AppColors.lightCard,
-                            child: mediaUrl.isNotEmpty
-                                ? SmartImage(
-                                    imageUrl: mediaUrl,
-                                    fit: BoxFit.cover,
-                                  )
-                                : const Icon(Icons.movie_outlined),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(14),
+                            child: Container(
+                              color: isDark ? AppColors.darkCard : AppColors.lightCard,
+                              child: mediaUrl.isNotEmpty
+                                  ? SmartImage(
+                                      imageUrl: mediaUrl,
+                                      fit: BoxFit.cover,
+                                    )
+                                  : const Icon(Icons.movie_outlined),
+                            ),
                           ),
                         );
                       },
@@ -927,14 +981,14 @@ class _ProfileTabWidgetState extends State<_ProfileTabWidget> with AutomaticKeep
           count,
           style: TextStyle(
             fontSize: 18,
-            fontWeight: FontWeight.bold,
+            fontWeight: FontWeight.w900,
             color: primaryColor,
           ),
         ),
         const SizedBox(height: 2),
         Text(
           label,
-          style: TextStyle(fontSize: 12, color: textSecondary),
+          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: textSecondary),
         ),
       ],
     );

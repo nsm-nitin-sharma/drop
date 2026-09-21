@@ -120,6 +120,8 @@ class _RegisterPageState extends State<RegisterPage> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final primaryColor = isDark ? AppColors.white : AppColors.black;
+    final surfaceColor = isDark ? AppColors.darkSurface : AppColors.lightSurface;
+    final borderColor = isDark ? AppColors.darkBorder : AppColors.lightBorder;
     final textSecondary = isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary;
 
     return Scaffold(
@@ -143,159 +145,180 @@ class _RegisterPageState extends State<RegisterPage> {
           }
         },
         child: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Create Account',
-                    style: TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                      color: primaryColor,
-                      letterSpacing: -0.5,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    'Claim your unique handle and join Drop.',
-                    style: TextStyle(color: textSecondary, fontSize: 14),
-                  ),
-                  const SizedBox(height: 32),
-
-                  // Display Name
-                  MonochromeTextField(
-                    controller: _displayNameController,
-                    label: 'Display Name',
-                    hint: 'Nitin Sharma',
-                    prefixIcon: Icons.person_outline,
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return 'Please enter your display name';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Handle (@username) with Real-time Check
-                  MonochromeTextField(
-                    controller: _handleController,
-                    label: 'Handle (@username)',
-                    hint: 'nitin_sharma',
-                    prefixText: '@',
-                    onChanged: _onHandleChanged,
-                    suffixIcon: _buildHandleSuffixIcon(isDark),
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return 'Please choose a handle';
-                      }
-                      if (!AppConstants.handleRegex.hasMatch(value.trim())) {
-                        return 'Handle must be 3-20 characters (letters, numbers, _ only)';
-                      }
-                      if (_isHandleAvailable == false) {
-                        return 'Handle is already taken';
-                      }
-                      return null;
-                    },
-                  ),
-                  if (_handleStatusMessage != null) ...[
-                    const SizedBox(height: 6),
-                    Row(
-                      children: [
-                        Icon(
-                          _isHandleAvailable == true
-                              ? Icons.check_circle_outline
-                              : _isCheckingHandle
-                                  ? Icons.access_time
-                                  : Icons.error_outline,
-                          size: 14,
-                          color: _isHandleAvailable == true
-                              ? AppColors.successGreen
-                              : _isCheckingHandle
-                                  ? textSecondary
-                                  : AppColors.errorRed,
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+              child: Container(
+                constraints: const BoxConstraints(maxWidth: 440),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        'Join Drop',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 32,
+                          fontWeight: FontWeight.w900,
+                          color: primaryColor,
+                          letterSpacing: -0.5,
                         ),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            _handleStatusMessage!,
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                              color: _isHandleAvailable == true
-                                  ? AppColors.successGreen
-                                  : _isCheckingHandle
-                                      ? textSecondary
-                                      : AppColors.errorRed,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                  const SizedBox(height: 16),
-
-                  // Email
-                  MonochromeTextField(
-                    controller: _emailController,
-                    label: 'Email',
-                    hint: 'name@example.com',
-                    keyboardType: TextInputType.emailAddress,
-                    prefixIcon: Icons.email_outlined,
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return 'Please enter your email';
-                      }
-                      if (!value.contains('@')) {
-                        return 'Please enter a valid email address';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Password
-                  MonochromeTextField(
-                    controller: _passwordController,
-                    label: 'Password',
-                    hint: 'Minimum 6 characters',
-                    obscureText: _obscurePassword,
-                    prefixIcon: Icons.lock_outline,
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _obscurePassword ? Icons.visibility_off : Icons.visibility,
-                        color: textSecondary,
                       ),
-                      onPressed: () {
-                        setState(() {
-                          _obscurePassword = !_obscurePassword;
-                        });
-                      },
-                    ),
-                    validator: (value) {
-                      if (value == null || value.length < 6) {
-                        return 'Password must be at least 6 characters long';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 32),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Claim your unique handle and start sharing.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: textSecondary, fontSize: 14),
+                      ),
+                      const SizedBox(height: 32),
 
-                  // Sign Up Button
-                  BlocBuilder<AuthBloc, AuthState>(
-                    builder: (context, state) {
-                      return MonochromeButton(
-                        label: 'Sign Up',
-                        isLoading: state is AuthLoading,
-                        onPressed: _onRegisterSubmitted,
-                      );
-                    },
+                      // Glass Card Form
+                      Container(
+                        padding: const EdgeInsets.all(24),
+                        decoration: BoxDecoration(
+                          color: surfaceColor,
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(color: borderColor, width: 1.2),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Display Name
+                            MonochromeTextField(
+                              controller: _displayNameController,
+                              label: 'Display Name',
+                              hint: 'Nitin Sharma',
+                              prefixIcon: Icons.person_outline,
+                              validator: (value) {
+                                if (value == null || value.trim().isEmpty) {
+                                  return 'Please enter your display name';
+                                }
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 16),
+
+                            // Handle (@username) with Real-time Check
+                            MonochromeTextField(
+                              controller: _handleController,
+                              label: 'Handle (@username)',
+                              hint: 'nitin_sharma',
+                              prefixText: '@',
+                              onChanged: _onHandleChanged,
+                              suffixIcon: _buildHandleSuffixIcon(isDark),
+                              validator: (value) {
+                                if (value == null || value.trim().isEmpty) {
+                                  return 'Please choose a handle';
+                                }
+                                if (!AppConstants.handleRegex.hasMatch(value.trim())) {
+                                  return 'Handle must be 3-20 characters (letters, numbers, _ only)';
+                                }
+                                if (_isHandleAvailable == false) {
+                                  return 'Handle is already taken';
+                                }
+                                return null;
+                              },
+                            ),
+                            if (_handleStatusMessage != null) ...[
+                              const SizedBox(height: 6),
+                              Row(
+                                children: [
+                                  Icon(
+                                    _isHandleAvailable == true
+                                        ? Icons.check_circle_outline
+                                        : _isCheckingHandle
+                                            ? Icons.access_time
+                                            : Icons.error_outline,
+                                    size: 14,
+                                    color: _isHandleAvailable == true
+                                        ? AppColors.successGreen
+                                        : _isCheckingHandle
+                                            ? textSecondary
+                                            : AppColors.errorRed,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: Text(
+                                      _handleStatusMessage!,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w500,
+                                        color: _isHandleAvailable == true
+                                            ? AppColors.successGreen
+                                            : _isCheckingHandle
+                                                ? textSecondary
+                                                : AppColors.errorRed,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                            const SizedBox(height: 16),
+
+                            // Email
+                            MonochromeTextField(
+                              controller: _emailController,
+                              label: 'Email',
+                              hint: 'name@example.com',
+                              keyboardType: TextInputType.emailAddress,
+                              prefixIcon: Icons.email_outlined,
+                              validator: (value) {
+                                if (value == null || value.trim().isEmpty) {
+                                  return 'Please enter your email';
+                                }
+                                if (!value.contains('@')) {
+                                  return 'Please enter a valid email address';
+                                }
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 16),
+
+                            // Password
+                            MonochromeTextField(
+                              controller: _passwordController,
+                              label: 'Password',
+                              hint: 'Minimum 6 characters',
+                              obscureText: _obscurePassword,
+                              prefixIcon: Icons.lock_outline,
+                              suffixIcon: IconButton(
+                                icon: Icon(
+                                  _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                                  color: textSecondary,
+                                ),
+                                onPressed: () {
+                                  setState(() {
+                                    _obscurePassword = !_obscurePassword;
+                                  });
+                                },
+                              ),
+                              validator: (value) {
+                                if (value == null || value.length < 6) {
+                                  return 'Password must be at least 6 characters long';
+                                }
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 28),
+
+                            // Sign Up Button
+                            BlocBuilder<AuthBloc, AuthState>(
+                              builder: (context, state) {
+                                return MonochromeButton(
+                                  label: 'Create Account',
+                                  isLoading: state is AuthLoading,
+                                  onPressed: _onRegisterSubmitted,
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
             ),
           ),
