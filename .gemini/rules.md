@@ -51,5 +51,7 @@ Before executing any task or modifying code in this project, the AI agent MUST a
 
 ### Git & GitHub Workflow
 - **Repository URL**: `https://github.com/nsm-nitin-sharma/drop.git`
-- **Target Branch**: `AI` branch ONLY. (NEVER push directly to `main`).
-- **Commit Cadence**: Commit and push progress after completing every crucial implementation phase.
+- **Branches**: `AI` (AI working branch) and `main` (stable target branch).
+- **Push Policy**: Push ONLY to `AI` branch. NEVER push directly to `main`.
+- **Merge Policy**: The user will review changes pushed to `AI` and perform the merge into `main`.
+- **Commit Cadence**: Commit and push progress to `AI` after completing every crucial phase.
