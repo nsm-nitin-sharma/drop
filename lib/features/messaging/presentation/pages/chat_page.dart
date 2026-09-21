@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import '../../../../core/services/notification_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/monochrome_avatar.dart';
 import '../../../../core/widgets/smart_image.dart';
@@ -61,6 +62,20 @@ class _ChatPageState extends State<ChatPage> {
         receiverId: widget.targetUser.uid,
         text: text,
         mediaFile: mediaFile,
+      );
+
+      // Trigger Push & In-App Notification
+      NotificationService.instance.sendNotification(
+        recipientId: widget.targetUser.uid,
+        senderId: widget.currentUser.uid,
+        senderName: widget.currentUser.displayName,
+        senderAvatar: widget.currentUser.photoUrl,
+        type: 'message',
+        title: widget.currentUser.displayName,
+        body: text.isNotEmpty ? text : 'Sent an attachment',
+        dataPayload: {
+          'chatId': _chatId,
+        },
       );
     } catch (e) {
       if (mounted) {

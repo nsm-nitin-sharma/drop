@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/services/notification_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/monochrome_avatar.dart';
 import '../../../../core/widgets/monochrome_button.dart';
@@ -131,6 +132,19 @@ class _UserProfilePageState extends State<UserProfilePage> {
                                     await widget.socialGraphRepository.followUser(
                                       currentUid: widget.currentUserId,
                                       targetUid: user.uid,
+                                    );
+
+                                    // Send Push & In-App Notification
+                                    final currentUserDoc = await widget.profileRepository.getUserProfile(widget.currentUserId);
+                                    final senderName = currentUserDoc.displayName;
+                                    NotificationService.instance.sendNotification(
+                                      recipientId: user.uid,
+                                      senderId: widget.currentUserId,
+                                      senderName: senderName,
+                                      senderAvatar: currentUserDoc.photoUrl,
+                                      type: 'follow',
+                                      title: senderName,
+                                      body: 'started following you',
                                     );
                                   }
                                 } catch (e) {

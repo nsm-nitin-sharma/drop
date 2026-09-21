@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/errors/failures.dart';
+import '../../../../core/services/notification_service.dart';
 import '../../domain/repositories/auth_repository.dart';
 import 'auth_event.dart';
 import 'auth_state.dart';
@@ -26,6 +27,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     Emitter<AuthState> emit,
   ) {
     if (event.user != null) {
+      NotificationService.instance.saveFcmToken(event.user!.uid);
       emit(Authenticated(event.user!));
     } else {
       emit(Unauthenticated());
@@ -59,6 +61,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         loginInput: event.loginInput,
         password: event.password,
       );
+      NotificationService.instance.saveFcmToken(user.uid);
       emit(Authenticated(user));
     } catch (e) {
       emit(AuthFailureState(_cleanErrorMessage(e)));
@@ -77,6 +80,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         handle: event.handle,
         displayName: event.displayName,
       );
+      NotificationService.instance.saveFcmToken(user.uid);
       emit(Authenticated(user));
     } catch (e) {
       emit(AuthFailureState(_cleanErrorMessage(e)));

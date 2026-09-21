@@ -1,6 +1,7 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'app/app.dart';
+import 'core/services/notification_service.dart';
 import 'firebase_options.dart';
 
 void main() async {
@@ -11,6 +12,7 @@ void main() async {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
+    await NotificationService.instance.initialize();
   } catch (e) {
     debugPrint('Firebase initialization warning: $e');
   }
