@@ -69,7 +69,14 @@ class _MainScreenState extends State<MainScreen> {
 
     final List<Widget> pages = [
       // 0: Feed Screen
-      _buildFeedTab(context, currentUser),
+      _FeedTabWidget(
+        key: const PageStorageKey('FeedTab'),
+        currentUser: currentUser,
+        feedRepository: _feedRepository,
+        messagingRepository: _messagingRepository,
+        profileRepository: _profileRepository,
+        onAddPostPressed: () => setState(() => _selectedIndex = 2),
+      ),
 
       // 1: Search Screen
       SearchPage(
@@ -104,11 +111,20 @@ class _MainScreenState extends State<MainScreen> {
         },
       ),
 
-      // 3: Reels Screen (Vertical Snap Video Feed)
-      _buildReelsTab(context, currentUser),
+      // 3: Reels Screen
+      _ReelsTabWidget(
+        key: const PageStorageKey('ReelsTab'),
+        currentUser: currentUser,
+        feedRepository: _feedRepository,
+      ),
 
       // 4: Profile Screen
-      _buildProfileTab(context, currentUser),
+      _ProfileTabWidget(
+        key: const PageStorageKey('ProfileTab'),
+        currentUser: currentUser,
+        feedRepository: _feedRepository,
+        profileRepository: _profileRepository,
+      ),
     ];
 
     return Scaffold(
@@ -163,8 +179,36 @@ class _MainScreenState extends State<MainScreen> {
       ),
     );
   }
+}
 
-  Widget _buildFeedTab(BuildContext context, UserEntity currentUser) {
+/// Persistent Feed Tab keeping scroll state and loaded images in memory
+class _FeedTabWidget extends StatefulWidget {
+  final UserEntity currentUser;
+  final FeedRepository feedRepository;
+  final MessagingRepository messagingRepository;
+  final ProfileRepository profileRepository;
+  final VoidCallback onAddPostPressed;
+
+  const _FeedTabWidget({
+    super.key,
+    required this.currentUser,
+    required this.feedRepository,
+    required this.messagingRepository,
+    required this.profileRepository,
+    required this.onAddPostPressed,
+  });
+
+  @override
+  State<_FeedTabWidget> createState() => _FeedTabWidgetState();
+}
+
+class _FeedTabWidgetState extends State<_FeedTabWidget> with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final primaryColor = isDark ? AppColors.white : AppColors.black;
     final textSecondary = isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary;
@@ -191,11 +235,7 @@ class _MainScreenState extends State<MainScreen> {
                   children: [
                     IconButton(
                       icon: const Icon(Icons.add_circle_outline),
-                      onPressed: () {
-                        setState(() {
-                          _selectedIndex = 2;
-                        });
-                      },
+                      onPressed: widget.onAddPostPressed,
                     ),
                     IconButton(
                       icon: const Icon(Icons.send_outlined),
@@ -204,9 +244,9 @@ class _MainScreenState extends State<MainScreen> {
                           context,
                           MaterialPageRoute(
                             builder: (_) => ConversationsPage(
-                              currentUser: currentUser,
-                              messagingRepository: _messagingRepository,
-                              profileRepository: _profileRepository,
+                              currentUser: widget.currentUser,
+                              messagingRepository: widget.messagingRepository,
+                              profileRepository: widget.profileRepository,
                             ),
                           ),
                         );
@@ -220,7 +260,7 @@ class _MainScreenState extends State<MainScreen> {
           const Divider(height: 1),
           Expanded(
             child: StreamBuilder<List<PostEntity>>(
-              stream: _feedRepository.getFeedPostsStream(currentUserId: currentUser.uid),
+              stream: widget.feedRepository.getFeedPostsStream(currentUserId: widget.currentUser.uid),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator(strokeWidth: 2));
@@ -250,21 +290,18 @@ class _MainScreenState extends State<MainScreen> {
                         MonochromeButton(
                           label: 'Create Post',
                           width: 160,
-                          onPressed: () {
-                            setState(() {
-                              _selectedIndex = 2;
-                            });
-                          },
+                          onPressed: widget.onAddPostPressed,
                         ),
                       ],
                     ),
                   );
                 }
                 return ListView.builder(
+                  key: const PageStorageKey('FeedListView'),
                   itemCount: posts.length,
                   itemBuilder: (context, index) {
                     final post = posts[index];
-                    return _buildPostCard(context, post, currentUser);
+                    return _buildPostCard(context, post, widget.currentUser);
                   },
                 );
               },
@@ -279,7 +316,6 @@ class _MainScreenState extends State<MainScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final primaryColor = isDark ? AppColors.white : AppColors.black;
     final textSecondary = isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary;
-
     final mediaUrl = post.mediaUrls.isNotEmpty ? post.mediaUrls.first : '';
 
     return Container(
@@ -306,6 +342,12 @@ class _MainScreenState extends State<MainScreen> {
                     fontSize: 14,
                   ),
                 ),
+                const Spacer(),
+                if (post.authorId == currentUser.uid)
+                  IconButton(
+                    icon: Icon(Icons.more_vert, color: textSecondary, size: 20),
+                    onPressed: () => _showPostOptionsMenu(context, post, currentUser),
+                  ),
               ],
             ),
           ),
@@ -331,7 +373,7 @@ class _MainScreenState extends State<MainScreen> {
                     color: post.isLikedByCurrentUser ? AppColors.heartRed : primaryColor,
                   ),
                   onPressed: () {
-                    _feedRepository.toggleLikePost(
+                    widget.feedRepository.toggleLikePost(
                       postId: post.postId,
                       currentUserId: currentUser.uid,
                     );
@@ -391,13 +433,143 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
-  Widget _buildReelsTab(BuildContext context, UserEntity currentUser) {
+  void _showPostOptionsMenu(BuildContext context, PostEntity post, UserEntity currentUser) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final surfaceColor = isDark ? AppColors.darkSurface : AppColors.lightSurface;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: surfaceColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) {
+        return SafeArea(
+          child: Wrap(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.delete_outline, color: AppColors.errorRed),
+                title: const Text('Delete Post', style: TextStyle(color: AppColors.errorRed, fontWeight: FontWeight.bold)),
+                onTap: () {
+                  Navigator.pop(context);
+                  _showDeleteConfirmationDialog(context, post, currentUser);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showDeleteConfirmationDialog(BuildContext context, PostEntity post, UserEntity currentUser) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primaryColor = isDark ? AppColors.white : AppColors.black;
+    final surfaceColor = isDark ? AppColors.darkSurface : AppColors.lightSurface;
+    final textSecondary = isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary;
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          backgroundColor: surfaceColor,
+          surfaceTintColor: Colors.transparent,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(color: isDark ? AppColors.darkBorder : AppColors.lightBorder),
+          ),
+          title: Text(
+            'Delete Post',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: primaryColor),
+          ),
+          content: Text(
+            'Are you sure you want to delete this post? This action cannot be undone.',
+            style: TextStyle(color: textSecondary, fontSize: 14),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text('Cancel', style: TextStyle(color: textSecondary, fontWeight: FontWeight.w600)),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final messenger = ScaffoldMessenger.of(context);
+                Navigator.pop(dialogContext);
+                try {
+                  await widget.feedRepository.deletePost(postId: post.postId, authorId: currentUser.uid);
+                  messenger.showSnackBar(
+                    const SnackBar(
+                      content: Text('Post deleted successfully.'),
+                      backgroundColor: AppColors.successGreen,
+                    ),
+                  );
+                } catch (e) {
+                  messenger.showSnackBar(
+                    const SnackBar(
+                      content: Text('Failed to delete post. Please try again.'),
+                      backgroundColor: AppColors.errorRed,
+                    ),
+                  );
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.errorRed,
+                foregroundColor: AppColors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              child: const Text('Delete', style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showCommentsSheet(BuildContext context, PostEntity post, UserEntity currentUser) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => CommentsBottomSheet(
+        postId: post.postId,
+        currentUserId: currentUser.uid,
+        currentUserHandle: currentUser.handle,
+        currentUserPhotoUrl: currentUser.photoUrl,
+        feedRepository: widget.feedRepository,
+      ),
+    );
+  }
+}
+
+/// Persistent Reels Tab Widget
+class _ReelsTabWidget extends StatefulWidget {
+  final UserEntity currentUser;
+  final FeedRepository feedRepository;
+
+  const _ReelsTabWidget({
+    super.key,
+    required this.currentUser,
+    required this.feedRepository,
+  });
+
+  @override
+  State<_ReelsTabWidget> createState() => _ReelsTabWidgetState();
+}
+
+class _ReelsTabWidgetState extends State<_ReelsTabWidget> with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
     final textSecondary = Theme.of(context).brightness == Brightness.dark
         ? AppColors.darkTextSecondary
         : AppColors.lightTextSecondary;
 
     return StreamBuilder<List<PostEntity>>(
-      stream: _feedRepository.getFeedPostsStream(currentUserId: currentUser.uid),
+      stream: widget.feedRepository.getFeedPostsStream(currentUserId: widget.currentUser.uid),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator(strokeWidth: 2));
@@ -434,44 +606,66 @@ class _MainScreenState extends State<MainScreen> {
             return ReelCard(
               post: post,
               onLikeToggle: () {
-                _feedRepository.toggleLikePost(
+                widget.feedRepository.toggleLikePost(
                   postId: post.postId,
-                  currentUserId: currentUser.uid,
+                  currentUserId: widget.currentUser.uid,
                 );
               },
-              onCommentTap: () => _showCommentsSheet(context, post, currentUser),
+              onCommentTap: () {
+                showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  backgroundColor: Colors.transparent,
+                  builder: (_) => CommentsBottomSheet(
+                    postId: post.postId,
+                    currentUserId: widget.currentUser.uid,
+                    currentUserHandle: widget.currentUser.handle,
+                    currentUserPhotoUrl: widget.currentUser.photoUrl,
+                    feedRepository: widget.feedRepository,
+                  ),
+                );
+              },
             );
           },
         );
       },
     );
   }
+}
 
-  void _showCommentsSheet(BuildContext context, PostEntity post, UserEntity currentUser) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => CommentsBottomSheet(
-        postId: post.postId,
-        currentUserId: currentUser.uid,
-        currentUserHandle: currentUser.handle,
-        currentUserPhotoUrl: currentUser.photoUrl,
-        feedRepository: _feedRepository,
-      ),
-    );
-  }
+/// Persistent Profile Tab Widget
+class _ProfileTabWidget extends StatefulWidget {
+  final UserEntity currentUser;
+  final FeedRepository feedRepository;
+  final ProfileRepository profileRepository;
 
-  Widget _buildProfileTab(BuildContext context, UserEntity currentUser) {
+  const _ProfileTabWidget({
+    super.key,
+    required this.currentUser,
+    required this.feedRepository,
+    required this.profileRepository,
+  });
+
+  @override
+  State<_ProfileTabWidget> createState() => _ProfileTabWidgetState();
+}
+
+class _ProfileTabWidgetState extends State<_ProfileTabWidget> with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final primaryColor = isDark ? AppColors.white : AppColors.black;
     final textSecondary = isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary;
 
     return StreamBuilder<UserEntity>(
-      stream: _profileRepository.streamUserProfile(currentUser.uid),
-      initialData: currentUser,
+      stream: widget.profileRepository.streamUserProfile(widget.currentUser.uid),
+      initialData: widget.currentUser,
       builder: (context, snapshot) {
-        final user = snapshot.data ?? currentUser;
+        final user = snapshot.data ?? widget.currentUser;
 
         return SafeArea(
           child: SingleChildScrollView(
@@ -560,7 +754,7 @@ class _MainScreenState extends State<MainScreen> {
                       backgroundColor: Colors.transparent,
                       builder: (_) => EditProfileSheet(
                         currentUser: user,
-                        profileRepository: _profileRepository,
+                        profileRepository: widget.profileRepository,
                       ),
                     );
                   },
@@ -588,7 +782,7 @@ class _MainScreenState extends State<MainScreen> {
 
                 // User Posts Grid
                 StreamBuilder<List<PostEntity>>(
-                  stream: _feedRepository.getUserPostsStream(
+                  stream: widget.feedRepository.getUserPostsStream(
                     targetUserId: user.uid,
                     currentUserId: user.uid,
                   ),
@@ -617,14 +811,19 @@ class _MainScreenState extends State<MainScreen> {
                       itemBuilder: (context, index) {
                         final post = posts[index];
                         final mediaUrl = post.mediaUrls.isNotEmpty ? post.mediaUrls.first : '';
-                        return Container(
-                          color: isDark ? AppColors.darkCard : AppColors.lightCard,
-                          child: mediaUrl.isNotEmpty
-                              ? SmartImage(
-                                  imageUrl: mediaUrl,
-                                  fit: BoxFit.cover,
-                                )
-                              : const Icon(Icons.movie_outlined),
+                        return GestureDetector(
+                          onLongPress: () {
+                            _showPostDeleteOption(context, post, user.uid);
+                          },
+                          child: Container(
+                            color: isDark ? AppColors.darkCard : AppColors.lightCard,
+                            child: mediaUrl.isNotEmpty
+                                ? SmartImage(
+                                    imageUrl: mediaUrl,
+                                    fit: BoxFit.cover,
+                                  )
+                                : const Icon(Icons.movie_outlined),
+                          ),
                         );
                       },
                     );
@@ -632,6 +831,28 @@ class _MainScreenState extends State<MainScreen> {
                 ),
               ],
             ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showPostDeleteOption(BuildContext context, PostEntity post, String currentUserId) {
+    showModalBottomSheet(
+      context: context,
+      builder: (_) {
+        return SafeArea(
+          child: Wrap(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.delete_outline, color: AppColors.errorRed),
+                title: const Text('Delete Post', style: TextStyle(color: AppColors.errorRed, fontWeight: FontWeight.bold)),
+                onTap: () async {
+                  Navigator.pop(context);
+                  await widget.feedRepository.deletePost(postId: post.postId, authorId: currentUserId);
+                },
+              ),
+            ],
           ),
         );
       },

@@ -28,6 +28,7 @@ abstract class FeedRemoteDataSource {
     String? authorPhotoUrl,
     required String text,
   });
+  Future<void> deletePost({required String postId, required String authorId});
 }
 
 class FeedRemoteDataSourceImpl implements FeedRemoteDataSource {
@@ -60,7 +61,6 @@ class FeedRemoteDataSourceImpl implements FeedRemoteDataSource {
     return _firestore
         .collection(AppConstants.postsCollection)
         .where('authorId', isEqualTo: targetUserId)
-        .orderBy('createdAt', descending: true)
         .snapshots()
         .asyncMap((snapshot) async {
       final List<PostModel> posts = [];
@@ -68,6 +68,7 @@ class FeedRemoteDataSourceImpl implements FeedRemoteDataSource {
         final isLiked = await _checkIfLiked(doc.id, currentUserId);
         posts.add(PostModel.fromFirestore(doc, isLikedByCurrentUser: isLiked));
       }
+      posts.sort((a, b) => b.createdAt.compareTo(a.createdAt));
       return posts;
     });
   }
@@ -167,10 +168,12 @@ class FeedRemoteDataSourceImpl implements FeedRemoteDataSource {
     return _firestore
         .collection(AppConstants.commentsCollection)
         .where('postId', isEqualTo: postId)
-        .orderBy('createdAt', descending: false)
         .snapshots()
-        .map((snapshot) =>
-            snapshot.docs.map((doc) => CommentModel.fromFirestore(doc)).toList());
+        .map((snapshot) {
+      final comments = snapshot.docs.map((doc) => CommentModel.fromFirestore(doc)).toList();
+      comments.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+      return comments;
+    });
   }
 
   @override
@@ -203,5 +206,18 @@ class FeedRemoteDataSourceImpl implements FeedRemoteDataSource {
     });
 
     return commentModel;
+  }
+
+  @override
+  Future<void> deletePost({required String postId, required String authorId}) async {
+    final postRef = _firestore.collection(AppConstants.postsCollection).doc(postId);
+    final userRef = _firestore.collection(AppConstants.usersCollection).doc(authorId);
+
+    await _firestore.runTransaction((transaction) async {
+      transaction.delete(postRef);
+      transaction.update(userRef, {
+        'postsCount': FieldValue.increment(-1),
+      });
+    });
   }
 }

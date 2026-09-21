@@ -70,4 +70,12 @@ class FeedRepositoryImpl implements FeedRepository {
       text: text,
     );
   }
+
+  @override
+  Future<void> deletePost({
+    required String postId,
+    required String authorId,
+  }) {
+    return _remoteDataSource.deletePost(postId: postId, authorId: authorId);
+  }
 }

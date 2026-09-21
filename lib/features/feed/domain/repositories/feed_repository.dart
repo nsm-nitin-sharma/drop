@@ -32,4 +32,9 @@ abstract class FeedRepository {
     String? authorPhotoUrl,
     required String text,
   });
+
+  Future<void> deletePost({
+    required String postId,
+    required String authorId,
+  });
 }
