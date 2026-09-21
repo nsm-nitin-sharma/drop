@@ -124,6 +124,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
 
         transaction.set(handleDocRef, {
           'uid': user.uid,
+          'email': email.trim().toLowerCase(),
           'createdAt': FieldValue.serverTimestamp(),
         });
 
@@ -162,13 +163,19 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
           throw const AuthFailure('Incorrect handle or password.');
         }
 
-        final uid = handleDoc.data()?['uid'] as String?;
-        if (uid == null) {
-          throw const AuthFailure('Incorrect handle or password.');
+        final handleData = handleDoc.data();
+        String? email = handleData?['email'] as String?;
+
+        if (email == null || email.isEmpty) {
+          final uid = handleData?['uid'] as String?;
+          if (uid == null) {
+            throw const AuthFailure('Incorrect handle or password.');
+          }
+
+          final userDoc = await _firestore.collection(AppConstants.usersCollection).doc(uid).get();
+          email = userDoc.data()?['email'] as String?;
         }
 
-        final userDoc = await _firestore.collection(AppConstants.usersCollection).doc(uid).get();
-        final email = userDoc.data()?['email'] as String?;
         if (email == null || email.isEmpty) {
           throw const AuthFailure('Incorrect handle or password.');
         }
