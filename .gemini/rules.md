@@ -49,10 +49,12 @@ Before executing any task or modifying code in this project, the AI agent MUST a
 - Strict **Storage Security Rules** (`storage.rules`) validating mime-types and file size constraints.
 - **Handle Uniqueness**: Unique `@username` registration enforced using Firestore atomic transactions to prevent duplicates or handle hijacking.
 
-### Git & GitHub Workflow
-- **Repository URL**: `https://github.com/nsm-nitin-sharma/drop.git`
-- **Branches**: `AI` (AI working branch) and `main` (stable target branch).
-- **Push Policy**: Push ONLY to `AI` branch. NEVER push directly to `main`.
-- **Merge Policy**: The user will review changes pushed to `AI` and perform the merge into `main`.
+### Git & GitHub Pull Request Workflow
+- **Default Branch on GitHub**: `main` (Stable production branch).
+- **AI Working Branch**: `AI` (Feature & implementation branch).
+- **Push Policy**: All commits and code updates are pushed strictly to `AI` (`git push origin AI`). AI MUST NEVER push directly to `main`.
+- **User Pull Request & Merge Workflow**:
+  1. AI completes phase implementation, verifies code, and pushes to `AI`.
+  2. User visits GitHub and opens a Pull Request (`AI` -> `main`).
+  3. User reviews the PR diffs, approves, and merges `AI` into `main`.
 - **Secrets & Credentials**: NEVER commit `google-services.json`, `GoogleService-Info.plist`, `firebase_options.dart`, or API key files to Git. Ensure they remain ignored in `.gitignore`.
-- **Commit Cadence**: Commit and push progress to `AI` after completing every crucial phase.
