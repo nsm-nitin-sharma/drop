@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/monochrome_button.dart';
 import '../../../../core/widgets/monochrome_text_field.dart';
+import '../../domain/repositories/auth_repository.dart';
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
@@ -21,10 +23,16 @@ class _RegisterPageState extends State<RegisterPage> {
   final _passwordController = TextEditingController();
   final _displayNameController = TextEditingController();
   final _handleController = TextEditingController();
+
   bool _obscurePassword = true;
+  Timer? _debounceTimer;
+  bool _isCheckingHandle = false;
+  bool? _isHandleAvailable;
+  String? _handleStatusMessage;
 
   @override
   void dispose() {
+    _debounceTimer?.cancel();
     _emailController.dispose();
     _passwordController.dispose();
     _displayNameController.dispose();
@@ -32,7 +40,70 @@ class _RegisterPageState extends State<RegisterPage> {
     super.dispose();
   }
 
+  void _onHandleChanged(String value) {
+    _debounceTimer?.cancel();
+    final cleanHandle = value.trim().toLowerCase();
+
+    if (cleanHandle.isEmpty) {
+      setState(() {
+        _isCheckingHandle = false;
+        _isHandleAvailable = null;
+        _handleStatusMessage = null;
+      });
+      return;
+    }
+
+    if (!AppConstants.handleRegex.hasMatch(cleanHandle)) {
+      setState(() {
+        _isCheckingHandle = false;
+        _isHandleAvailable = false;
+        _handleStatusMessage = 'Handle must be 3-20 characters (a-z, 0-9, _ only)';
+      });
+      return;
+    }
+
+    setState(() {
+      _isCheckingHandle = true;
+      _isHandleAvailable = null;
+      _handleStatusMessage = 'Checking availability...';
+    });
+
+    _debounceTimer = Timer(const Duration(milliseconds: 450), () async {
+      try {
+        final authRepo = context.read<AuthRepository>();
+        final available = await authRepo.isHandleAvailable(cleanHandle);
+        if (mounted) {
+          setState(() {
+            _isCheckingHandle = false;
+            _isHandleAvailable = available;
+            _handleStatusMessage = available
+                ? 'Handle @$cleanHandle is available'
+                : 'Handle @$cleanHandle is already taken';
+          });
+        }
+      } catch (e) {
+        if (mounted) {
+          setState(() {
+            _isCheckingHandle = false;
+            _isHandleAvailable = false;
+            _handleStatusMessage = 'Unable to verify handle availability';
+          });
+        }
+      }
+    });
+  }
+
   void _onRegisterSubmitted() {
+    if (_isHandleAvailable != true) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please choose an available handle (@username)'),
+          backgroundColor: AppColors.errorRed,
+        ),
+      );
+      return;
+    }
+
     if (_formKey.currentState?.validate() ?? false) {
       context.read<AuthBloc>().add(
             AuthSignUpRequested(
@@ -62,10 +133,13 @@ class _RegisterPageState extends State<RegisterPage> {
         listener: (context, state) {
           if (state is AuthFailureState) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.message)),
+              SnackBar(
+                content: Text(state.message),
+                backgroundColor: AppColors.errorRed,
+              ),
             );
           } else if (state is Authenticated) {
-            Navigator.pop(context); // Pop back to auth controller
+            Navigator.pop(context);
           }
         },
         child: SafeArea(
@@ -107,12 +181,14 @@ class _RegisterPageState extends State<RegisterPage> {
                   ),
                   const SizedBox(height: 16),
 
-                  // Handle (@username)
+                  // Handle (@username) with Real-time Check
                   MonochromeTextField(
                     controller: _handleController,
                     label: 'Handle (@username)',
                     hint: 'nitin_sharma',
                     prefixText: '@',
+                    onChanged: _onHandleChanged,
+                    suffixIcon: _buildHandleSuffixIcon(isDark),
                     validator: (value) {
                       if (value == null || value.trim().isEmpty) {
                         return 'Please choose a handle';
@@ -120,9 +196,47 @@ class _RegisterPageState extends State<RegisterPage> {
                       if (!AppConstants.handleRegex.hasMatch(value.trim())) {
                         return 'Handle must be 3-20 characters (letters, numbers, _ only)';
                       }
+                      if (_isHandleAvailable == false) {
+                        return 'Handle is already taken';
+                      }
                       return null;
                     },
                   ),
+                  if (_handleStatusMessage != null) ...[
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Icon(
+                          _isHandleAvailable == true
+                              ? Icons.check_circle_outline
+                              : _isCheckingHandle
+                                  ? Icons.access_time
+                                  : Icons.error_outline,
+                          size: 14,
+                          color: _isHandleAvailable == true
+                              ? AppColors.successGreen
+                              : _isCheckingHandle
+                                  ? textSecondary
+                                  : AppColors.errorRed,
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            _handleStatusMessage!,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: _isHandleAvailable == true
+                                  ? AppColors.successGreen
+                                  : _isCheckingHandle
+                                      ? textSecondary
+                                      : AppColors.errorRed,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                   const SizedBox(height: 16),
 
                   // Email
@@ -188,5 +302,30 @@ class _RegisterPageState extends State<RegisterPage> {
         ),
       ),
     );
+  }
+
+  Widget? _buildHandleSuffixIcon(bool isDark) {
+    if (_isCheckingHandle) {
+      return Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: SizedBox(
+          width: 16,
+          height: 16,
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            valueColor: AlwaysStoppedAnimation<Color>(
+              isDark ? AppColors.white : AppColors.black,
+            ),
+          ),
+        ),
+      );
+    }
+    if (_isHandleAvailable == true) {
+      return const Icon(Icons.check_circle, color: AppColors.successGreen, size: 20);
+    }
+    if (_isHandleAvailable == false) {
+      return const Icon(Icons.cancel, color: AppColors.errorRed, size: 20);
+    }
+    return null;
   }
 }

@@ -125,17 +125,38 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     required String email,
     required String password,
   }) async {
-    final credential = await _firebaseAuth.signInWithEmailAndPassword(
-      email: email.trim(),
-      password: password,
-    );
+    try {
+      final credential = await _firebaseAuth.signInWithEmailAndPassword(
+        email: email.trim(),
+        password: password,
+      );
 
-    final user = credential.user;
-    if (user == null) {
-      throw const AuthFailure('Failed to sign in.');
+      final user = credential.user;
+      if (user == null) {
+        throw const AuthFailure('Failed to sign in.');
+      }
+
+      return await getCurrentUserData(user.uid);
+    } on fb.FirebaseAuthException catch (e) {
+      switch (e.code) {
+        case 'user-not-found':
+          throw const AuthFailure('No account found with this email address.');
+        case 'wrong-password':
+        case 'invalid-credential':
+          throw const AuthFailure('Incorrect password or email. Please check your credentials.');
+        case 'invalid-email':
+          throw const AuthFailure('The email address is invalid.');
+        case 'user-disabled':
+          throw const AuthFailure('This account has been disabled.');
+        case 'too-many-requests':
+          throw const AuthFailure('Too many failed login attempts. Please wait a moment and try again.');
+        default:
+          throw AuthFailure(e.message ?? 'Authentication failed.');
+      }
+    } catch (e) {
+      if (e is AuthFailure) rethrow;
+      throw AuthFailure(e.toString());
     }
-
-    return await getCurrentUserData(user.uid);
   }
 
   @override

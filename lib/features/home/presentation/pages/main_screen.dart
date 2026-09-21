@@ -248,9 +248,7 @@ class _MainScreenState extends State<MainScreen> {
 
             // Actions
             OutlinedButton(
-              onPressed: () {
-                context.read<AuthBloc>().add(AuthSignOutRequested());
-              },
+              onPressed: () => _showLogoutConfirmationDialog(context),
               style: OutlinedButton.styleFrom(
                 minimumSize: const Size(double.infinity, 44),
                 side: BorderSide(color: isDark ? AppColors.darkBorder : AppColors.lightBorder),
@@ -266,6 +264,63 @@ class _MainScreenState extends State<MainScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  void _showLogoutConfirmationDialog(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primaryColor = isDark ? AppColors.white : AppColors.black;
+    final surfaceColor = isDark ? AppColors.darkSurface : AppColors.lightSurface;
+    final textSecondary = isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary;
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          backgroundColor: surfaceColor,
+          surfaceTintColor: Colors.transparent,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(color: isDark ? AppColors.darkBorder : AppColors.lightBorder),
+          ),
+          title: Text(
+            'Log Out',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: primaryColor,
+            ),
+          ),
+          content: Text(
+            'Are you sure you want to log out of Drop?',
+            style: TextStyle(color: textSecondary, fontSize: 14),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text(
+                'Cancel',
+                style: TextStyle(color: textSecondary, fontWeight: FontWeight.w600),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(dialogContext);
+                context.read<AuthBloc>().add(AuthSignOutRequested());
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.errorRed,
+                foregroundColor: AppColors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: const Text('Log Out', style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ],
+        );
+      },
     );
   }
 
